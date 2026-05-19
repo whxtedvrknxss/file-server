@@ -6,6 +6,8 @@
 #include <stdexcept>
 #include <vector>
 
+#include <llhttp.h>
+
 namespace http
 {
 
@@ -40,6 +42,12 @@ namespace http
     BodyTooLarge,
   };
 
+  struct parse_result
+  {
+    parse_status Status;
+    parse_error Error;
+  };
+
   enum class method
   {
     Get,
@@ -48,22 +56,13 @@ namespace http
     Put,
     Delete,
     Connect,
-    Options,
-    Trace,
-    Patch,
+    Error,
   };
 
   enum class version
   {
+    Http1_0,
     Http1_1,
-    Http2_0,
-  };
-
-  struct parse_result
-  {
-    parse_status Status;
-    parse_error Error;
-    std::size_t BytesConsumed;
   };
 
   struct header
@@ -74,13 +73,9 @@ namespace http
 
   struct message
   {
-    struct
-    {
-      method Method;
-      std::string URI;
-      version Version;
-    } StartLine;
-
+    method Method;
+    std::string URI;
+    version Version;
     std::vector<header> Headers;
     std::string Body;
   };
@@ -88,45 +83,47 @@ namespace http
   class request_parser
   {
   public:
-    request_parser() = default;
+    request_parser() noexcept;
 
-    parse_result Parse(std::span<const std::byte> Data);
+    [[nodiscard]] parse_result Parse(std::span<const char> Data);
 
-    [[nodiscard]] bool HasMessage() const noexcept;
+    [[nodiscard]] bool HasMessage() const noexcept
+    {
+      return MessageReady;
+    }
 
-    [[nodiscard]] message ReleaseMessage();
+    [[nodiscard]] message ReleaseMessage()
+    {
+      return std::exchange(Message, {});
+    }
 
     void Reset() noexcept;
 
   private:
-    enum class state
-    {
-      Method,
-      URI,
-      Version,
-      HeaderName,
-      HeaderValue,
-      HeadersDone,
-      Body,
-      Complete,
-      Error
-    };
+    parse_error TranslateError(llhttp_errno_t Err);
 
   private:
-    void ParseMethod();
-    void ParseURI();
-    void ParseVersion();
-    void ParseHeader();
-    void ParseBody();
+    // callbacks for llhttp
+    static int OnMethod(llhttp_t *Parser, const char *At, size_t Length);
+    static int OnURI(llhttp_t *Parser, const char *At, size_t Length);
+    static int OnHeaderName(llhttp_t *Parser, const char *At, size_t Length);
+    static int OnHeaderValue(llhttp_t *Parser, const char *At, size_t Length);
+    static int OnHeadersComplete(llhttp_t *Parser);
+    static int OnBody(llhttp_t *Parser, const char *At, size_t Length);
+    static int OnMessageComplete(llhttp_t *Parser);
 
   private:
     message Message;
 
-    state State = state::Method;
-    parse_error Error = parse_error::None;
+    bool MessageReady;
+    bool ParsingHeaderValue;
+    header CurrentHeader;
 
     std::size_t ContentLength{};
     std::size_t ParsedBodyBytes{};
+
+    llhttp_t Parser;
+    llhttp_settings_t Settings;
   };
 
 } // namespace http

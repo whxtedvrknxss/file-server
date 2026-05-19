@@ -6,6 +6,10 @@
 const size_t KILOBYTE = 1024;
 const size_t PACKAGE_SIZE = KILOBYTE * 4;
 
+server::server() : Acceptor(IoContext, tcp::endpoint(tcp::v4(), 8080)), Parser{}
+{
+}
+
 void server::Run()
 {
   using asio::ip::tcp;

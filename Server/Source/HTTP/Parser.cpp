@@ -1,90 +1,206 @@
 #include "Parser.hpp"
 
+#include <llhttp.h>
+
 namespace http
 {
-
-  parse_result request_parser::Parse(std::span<const std::byte> Content)
+  request_parser::request_parser() noexcept
+      : ParsingHeaderValue{false}, ContentLength{}, ParsedBodyBytes{}, MessageReady{false}
   {
-    return parse_result();
+    llhttp_settings_init(&Settings);
+
+    Settings.on_method = OnMethod;
+    Settings.on_url = OnURI;
+    Settings.on_header_field = OnHeaderName;
+    Settings.on_header_value = OnHeaderValue;
+    Settings.on_headers_complete = OnHeadersComplete;
+    Settings.on_body = OnBody;
+    Settings.on_message_complete = OnMessageComplete;
+
+    llhttp_init(&Parser, llhttp_type_t::HTTP_REQUEST, &Settings);
+
+    Parser.data = this;
   }
 
-  message request_parser::ReleaseMessage()
+  parse_result request_parser::Parse(std::span<const char> Content)
   {
-    return std::exchange(Message, {});
+    parse_result Result;
+
+    llhttp_errno_t Err = llhttp_execute(&Parser, Content.data(), Content.size());
+
+    Result.Status = (Err == HPE_OK) ? parse_status::Complete : parse_status::Error;
+    Result.Error = TranslateError(Err);
+
+    return Result;
   }
 
-  void request_parser::ParseMethod()
+  void request_parser::Reset() noexcept
   {
-    // if (Method == "GET")
-    // {
-    //   Message.StartLine.Method = http_method::Get;
-    //   return;
-    // }
-    // if (Method == "HEAD")
-    // {
-    //   Message.StartLine.Method = http_method::Head;
-    //   return;
-    // }
-    // if (Method == "POST")
-    // {
-    //   Message.StartLine.Method = http_method::Post;
-    //   return;
-    // }
-    // if (Method == "PUT")
-    // {
-    //   Message.StartLine.Method = http_method::Put;
-    //   return;
-    // }
-    // if (Method == "CONNECT")
-    // {
-    //   Message.StartLine.Method = http_method::Connect;
-    //   return;
-    // }
-    // if (Method == "OPTIONS")
-    // {
-    //   Message.StartLine.Method = http_method::Options;
-    //   return;
-    // }
-    // if (Method == "TRACE")
-    // {
-    //   Message.StartLine.Method = http_method::Trace;
-    //   return;
-    // }
-    // if (Method == "PATCH")
-    // {
-    //   Message.StartLine.Method = http_method::Patch;
-    //   return;
-    // }
-    throw parsing_error("Unknown method");
+    llhttp_reset(&Parser);
+
+    Message = {};
   }
 
-  void request_parser::ParseURI()
+  parse_error request_parser::TranslateError(llhttp_errno_t Err)
   {
-    // Message.StartLine.URI.assign(URI);
+    switch (Err)
+    {
+      case llhttp_errno_t::HPE_OK:
+      {
+        return parse_error::None;
+      }
+      case llhttp_errno_t::HPE_INVALID_METHOD:
+      {
+        return parse_error::InvalidMethod;
+      }
+      case llhttp_errno_t::HPE_INVALID_VERSION:
+      {
+        return parse_error::InvalidVersion;
+      }
+      case llhttp_errno_t::HPE_INVALID_HEADER_TOKEN:
+      {
+        return parse_error::MalformedHeader;
+      }
+      default:
+      {
+        return parse_error::UnexpectedEof;
+      }
+    }
   }
 
-  void request_parser::ParseVersion()
+  int request_parser::OnMethod(llhttp_t *Parser, const char *At, size_t Length)
   {
-    // if (Version == "HTTP/1.1")
-    // {
-    //   Message.StartLine.Version = http_version::Http1_0;
-    //   return;
-    // }
-    // if (Version == "HTTP/2")
-    // {
-    //   Message.StartLine.Version = http_version::Http2_0;
-    //   return;
-    // }
+    auto *Self = static_cast<request_parser *>(Parser->data);
 
-    throw parsing_error("Unknown version");
+    method &Method = Self->Message.Method;
+
+    switch (Parser->method)
+    {
+      case llhttp_method_t::HTTP_GET:
+      {
+        Method = method::Get;
+        break;
+      }
+      case llhttp_method::HTTP_HEAD:
+      {
+        Method = method::Head;
+        break;
+      }
+      case llhttp_method_t::HTTP_POST:
+      {
+        Method = method::Post;
+        break;
+      }
+      case llhttp_method_t::HTTP_PUT:
+      {
+        Method = method::Put;
+        break;
+      }
+      case llhttp_method_t::HTTP_DELETE:
+      {
+        Method = method::Delete;
+        break;
+      }
+      case llhttp_method_t::HTTP_CONNECT:
+      {
+        Method = method::Connect;
+        break;
+      }
+      default:
+      {
+        return llhttp_errno_t::HPE_INVALID_METHOD;
+      }
+    }
+
+    return llhttp_errno_t::HPE_OK;
   }
 
-  void request_parser::ParseHeader()
+  int request_parser::OnURI(llhttp_t *Parser, const char *At, size_t Length)
   {
+    auto *Self = static_cast<request_parser *>(Parser->data);
+
+    Self->Message.URI.append(At, Length);
+
+    return llhttp_errno_t::HPE_OK;
   }
 
-  void request_parser::ParseBody()
+  int request_parser::OnHeaderName(llhttp_t *Parser, const char *At, size_t Length)
   {
+    auto *Self = static_cast<request_parser *>(Parser->data);
+
+    header &CurrentHeader = Self->CurrentHeader;
+    if (Self->ParsingHeaderValue)
+    {
+      Self->Message.Headers.push_back(std::move(CurrentHeader));
+      Self->CurrentHeader = {};
+      Self->ParsingHeaderValue = false;
+    }
+
+    CurrentHeader.Name.append(At, Length);
+
+    return llhttp_errno_t::HPE_OK;
+  }
+
+  int request_parser::OnHeaderValue(llhttp_t *Parser, const char *At, size_t Length)
+  {
+    auto *Self = static_cast<request_parser *>(Parser->data);
+    header &CurrentHeader = Self->CurrentHeader;
+
+    Self->ParsingHeaderValue = true;
+    CurrentHeader.Value.append(At, Length);
+
+    return llhttp_errno_t::HPE_OK;
+  }
+
+  int request_parser::OnHeadersComplete(llhttp_t *Parser)
+  {
+    auto *Self = static_cast<request_parser *>(Parser->data);
+
+    header &CurrentHeader = Self->CurrentHeader;
+    if (!Self->CurrentHeader.Name.empty())
+    {
+      Self->Message.Headers.push_back(std::move(CurrentHeader));
+    }
+
+    version &Version = Self->Message.Version;
+    if (Parser->http_major == 1)
+    {
+      if (Parser->http_minor == 0)
+      {
+        Version = version::Http1_0;
+      }
+      else if (Parser->http_minor == 1)
+      {
+        Version = version::Http1_1;
+      }
+      else
+      {
+        return llhttp_errno_t::HPE_INVALID_VERSION;
+      }
+    }
+    else if (Parser->http_major == 2)
+    {
+      return llhttp_errno_t::HPE_INVALID_VERSION;
+    }
+
+    return llhttp_errno_t::HPE_OK;
+  }
+
+  int request_parser::OnBody(llhttp_t *Parser, const char *At, size_t Length)
+  {
+    auto *Self = static_cast<request_parser *>(Parser->data);
+    std::string &Body = Self->Message.Body;
+
+    Body.append(At, Length);
+
+    return llhttp_errno_t::HPE_OK;
+  }
+
+  int request_parser::OnMessageComplete(llhttp_t *Parser)
+  {
+    auto *Self = static_cast<request_parser *>(Parser->data);
+
+    return llhttp_errno_t::HPE_OK;
   }
 
 } // namespace http

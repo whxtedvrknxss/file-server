@@ -6,8 +6,13 @@ target_sources(${SERVER_EXECUTABLE_NAME} PRIVATE
   "Source/HTTP/Parser.cpp"
 )
 
+target_include_directories(${SERVER_EXECUTABLE_NAME} PRIVATE 
+  "Source"
+)
+
 target_link_libraries(${SERVER_EXECUTABLE_NAME} PRIVATE 
-  AsioInterface
+  llhttpInterface
+  asioInterface
   OpenSSLInterface
   nlohmann_json::nlohmann_json
 )

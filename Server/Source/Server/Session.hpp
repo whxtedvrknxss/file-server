@@ -17,10 +17,10 @@ public:
   void Start();
 
 private:
-  void DoRead();
-  void DoWrite(size_t Length);
+  void Read();
+  void Write(size_t Length);
 
 private:
   tcp::socket Socket;
-  std::array<char, 4096> Data;
+  std::array<std::byte, 4096> Data;
 };

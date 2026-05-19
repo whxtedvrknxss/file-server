@@ -18,11 +18,11 @@ FetchContent_Declare(
   GIT_TAG asio-1-30-2
 )
 FetchContent_MakeAvailable(asio)
-add_library(AsioInterface INTERFACE)
-target_include_directories(AsioInterface INTERFACE 
+add_library(asioInterface INTERFACE)
+target_include_directories(asioInterface INTERFACE 
   "${asio_SOURCE_DIR}/asio/include"
 )
-target_compile_definitions(AsioInterface INTERFACE 
+target_compile_definitions(asioInterface INTERFACE 
   ASIO_STANDALONE
   _WIN32_WINNT=0x0601
 )
@@ -42,10 +42,16 @@ target_link_libraries(OpenSSLInterface INTERFACE
   OpenSSL::Crypto
 )
 
+find_package(llhttp REQUIRED)
+add_library(llhttpInterface INTERFACE)
+target_link_libraries(llhttpInterface INTERFACE
+  llhttp::llhttp_static
+)
+
 set_target_properties(Server PROPERTIES 
   RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Output/Server"
 )
-set_target_properties(Server PROPERTIES 
+set_target_properties(Client PROPERTIES 
   RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Output/Client"
 )
 

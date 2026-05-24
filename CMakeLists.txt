@@ -12,12 +12,7 @@ add_subdirectory(Client)
 
 include(FetchContent)
 
-FetchContent_Declare(
-  asio
-  GIT_REPOSITORY https://github.com/chriskohlhoff/asio.git
-  GIT_TAG asio-1-30-2
-)
-FetchContent_MakeAvailable(asio)
+find_package(asio REQUIRED)
 add_library(asioInterface INTERFACE)
 target_include_directories(asioInterface INTERFACE 
   "${asio_SOURCE_DIR}/asio/include"
@@ -27,12 +22,11 @@ target_compile_definitions(asioInterface INTERFACE
   _WIN32_WINNT=0x0601
 )
 
-FetchContent_Declare(
-  json
-  GIT_REPOSITORY https://github.com/nlohmann/json.git
-  GIT_TAG v3.12.0
+find_package(nlohmann_json REQUIRED)
+add_library(jsonInterface INTERFACE)
+target_link_libraries(jsonInterface INTERFACE 
+  nlohmann_json::nlohmann_json
 )
-FetchContent_MakeAvailable(json)
 
 find_package(OpenSSL REQUIRED)
 add_library(OpenSSLInterface INTERFACE)

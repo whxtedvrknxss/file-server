@@ -1,11 +1,10 @@
-#include "Parser.hpp"
+#include "RequestParser.hpp"
 
 #include <llhttp.h>
 
 namespace http
 {
-  request_parser::request_parser() noexcept
-      : ParsingHeaderValue{false}, ContentLength{}, ParsedBodyBytes{}, MessageReady{false}
+  request_parser::request_parser(request_builder &Builder) noexcept : Builder{&Builder}, Complete{false}
   {
     llhttp_settings_init(&Settings);
 
@@ -37,8 +36,6 @@ namespace http
   void request_parser::Reset() noexcept
   {
     llhttp_reset(&Parser);
-
-    Message = {};
   }
 
   parse_error request_parser::TranslateError(llhttp_errno_t Err)
@@ -71,46 +68,7 @@ namespace http
   int request_parser::OnMethod(llhttp_t *Parser, const char *At, size_t Length)
   {
     auto *Self = static_cast<request_parser *>(Parser->data);
-
-    method &Method = Self->Message.Method;
-
-    switch (Parser->method)
-    {
-      case llhttp_method_t::HTTP_GET:
-      {
-        Method = method::Get;
-        break;
-      }
-      case llhttp_method::HTTP_HEAD:
-      {
-        Method = method::Head;
-        break;
-      }
-      case llhttp_method_t::HTTP_POST:
-      {
-        Method = method::Post;
-        break;
-      }
-      case llhttp_method_t::HTTP_PUT:
-      {
-        Method = method::Put;
-        break;
-      }
-      case llhttp_method_t::HTTP_DELETE:
-      {
-        Method = method::Delete;
-        break;
-      }
-      case llhttp_method_t::HTTP_CONNECT:
-      {
-        Method = method::Connect;
-        break;
-      }
-      default:
-      {
-        return llhttp_errno_t::HPE_INVALID_METHOD;
-      }
-    }
+    Self->Builder->OnMethod(std::string_view(At, Length));
 
     return llhttp_errno_t::HPE_OK;
   }
@@ -119,8 +77,7 @@ namespace http
   {
     auto *Self = static_cast<request_parser *>(Parser->data);
 
-    Self->Message.URI.append(At, Length);
-
+    Self->Builder->OnURI(std::string_view(At, Length));
     return llhttp_errno_t::HPE_OK;
   }
 
@@ -128,27 +85,21 @@ namespace http
   {
     auto *Self = static_cast<request_parser *>(Parser->data);
 
-    header &CurrentHeader = Self->CurrentHeader;
     if (Self->ParsingHeaderValue)
     {
-      Self->Message.Headers.push_back(std::move(CurrentHeader));
+      Self->Builder->OnHeader(Self->CurrentHeader.Name, Self->CurrentHeader.Value);
       Self->CurrentHeader = {};
-      Self->ParsingHeaderValue = false;
     }
-
-    CurrentHeader.Name.append(At, Length);
-
+    Self->CurrentHeader.Name.append(At, Length);
     return llhttp_errno_t::HPE_OK;
   }
 
   int request_parser::OnHeaderValue(llhttp_t *Parser, const char *At, size_t Length)
   {
     auto *Self = static_cast<request_parser *>(Parser->data);
-    header &CurrentHeader = Self->CurrentHeader;
 
     Self->ParsingHeaderValue = true;
-    CurrentHeader.Value.append(At, Length);
-
+    Self->CurrentHeader.Value.append(At, Length);
     return llhttp_errno_t::HPE_OK;
   }
 
@@ -156,32 +107,13 @@ namespace http
   {
     auto *Self = static_cast<request_parser *>(Parser->data);
 
-    header &CurrentHeader = Self->CurrentHeader;
-    if (!Self->CurrentHeader.Name.empty())
+    if (!Self->CurrentHeader.Name.empty() && !Self->CurrentHeader.Value.empty())
     {
-      Self->Message.Headers.push_back(std::move(CurrentHeader));
+      Self->Builder->OnHeader(Self->CurrentHeader.Name, Self->CurrentHeader.Value);
+      Self->CurrentHeader = {};
     }
 
-    version &Version = Self->Message.Version;
-    if (Parser->http_major == 1)
-    {
-      if (Parser->http_minor == 0)
-      {
-        Version = version::Http1_0;
-      }
-      else if (Parser->http_minor == 1)
-      {
-        Version = version::Http1_1;
-      }
-      else
-      {
-        return llhttp_errno_t::HPE_INVALID_VERSION;
-      }
-    }
-    else if (Parser->http_major == 2)
-    {
-      return llhttp_errno_t::HPE_INVALID_VERSION;
-    }
+    Self->Builder->OnVersion(Parser->http_major, Parser->http_minor);
 
     return llhttp_errno_t::HPE_OK;
   }
@@ -189,10 +121,7 @@ namespace http
   int request_parser::OnBody(llhttp_t *Parser, const char *At, size_t Length)
   {
     auto *Self = static_cast<request_parser *>(Parser->data);
-    std::string &Body = Self->Message.Body;
-
-    Body.append(At, Length);
-
+    Self->Builder->OnBody(std::string_view(At, Length));
     return llhttp_errno_t::HPE_OK;
   }
 

@@ -1,6 +1,8 @@
 {
   "dependencies": [
+    "asio",
+    "llhttp",
     "openssl",
-    "llhttp"
+    "nlohmann-json"
   ]
 }

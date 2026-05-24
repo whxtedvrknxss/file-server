@@ -7,6 +7,6 @@ target_sources(${CLIENT_EXECUTABLE_NAME} PRIVATE
 target_link_libraries(${CLIENT_EXECUTABLE_NAME} PRIVATE 
   asioInterface
   OpenSSLInterface
-  nlohmann_json::nlohmann_json
+  jsonInterface
 )
 

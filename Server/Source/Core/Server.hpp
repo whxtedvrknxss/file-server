@@ -3,8 +3,6 @@
 
 #include <asio.hpp>
 
-#include "HTTP/Parser.hpp"
-
 class server
 {
   using tcp = asio::ip::tcp;
@@ -18,5 +16,4 @@ public:
 private:
   asio::io_context IoContext;
   tcp::acceptor Acceptor;
-  http::request_parser Parser;
 };

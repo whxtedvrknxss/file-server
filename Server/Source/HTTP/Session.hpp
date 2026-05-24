@@ -5,12 +5,14 @@
 
 #include <asio.hpp>
 
+#include "HTTP/RequestParser.hpp"
+
 class session : public std::enable_shared_from_this<session>
 {
   using tcp = asio::ip::tcp;
 
 public:
-  explicit session(tcp::socket Socket) : Socket{std::move(Socket)}
+  explicit session(tcp::socket Socket) : Socket{std::move(Socket)}, Builder{}, Parser{Builder}
   {
   }
 
@@ -22,5 +24,9 @@ private:
 
 private:
   tcp::socket Socket;
-  std::array<std::byte, 4096> Data;
+  std::array<char, 4096> ReadBuffer;
+  std::array<char, 4096> WriteBuffer;
+
+  http::request_builder Builder;
+  http::request_parser Parser;
 };

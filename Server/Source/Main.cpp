@@ -2,7 +2,7 @@
 
 int main(int argc, char *argv[])
 {
-  server Server;
+  server Server(8080);
   Server.Run();
 
   return EXIT_SUCCESS;

@@ -42,7 +42,7 @@ thread_pool::~thread_pool()
   }
 }
 
-void thread_pool::enqueue(std::function<void()> Task)
+void thread_pool::Enqueue(std::function<void()> Task)
 {
   {
     std::unique_lock<std::mutex> Lock(QueueMutex);

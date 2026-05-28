@@ -13,7 +13,11 @@ public:
   thread_pool(size_t NumThreads = std::thread::hardware_concurrency());
   ~thread_pool();
 
-  void enqueue(std::function<void()> Task);
+  size_t Size() const
+  {
+    return Workers.size();
+  }
+  void Enqueue(std::function<void()> Task);
 
 private:
   std::vector<std::thread> Workers;

@@ -1,50 +1,35 @@
 #include "Server.hpp"
 
-#include <print>
-#include <string>
-
-#include <nlohmann/json.hpp>
-
-const size_t KILOBYTE = 1024;
-const size_t PACKAGE_SIZE = KILOBYTE * 4;
-
-server::server() : Acceptor(IoContext, tcp::endpoint(tcp::v4(), 8080))
+server::server(uint16_t Port) : Acceptor(IoContext, tcp::endpoint(tcp::v4(), Port))
 {
+  DoAccept();
 }
 
 void server::Run()
 {
-  using asio::ip::tcp;
-  try
+  for (size_t I{}; I < ThreadPool.Size(); ++I)
   {
-    while (true)
-    {
-      Listen();
-    }
-  }
-  catch (std::exception &Ex)
-  {
-    std::println("Error: {}", Ex.what());
+    ThreadPool.Enqueue([this] { IoContext.run(); });
   }
 }
 
 void server::Listen()
 {
-  tcp::socket Socket(IoContext);
-  Acceptor.accept(Socket);
+  DoAccept();
+  IoContext.run();
+}
 
-  std::array<char, PACKAGE_SIZE> Buffer;
-  size_t Length = Socket.read_some(asio::buffer(Buffer));
+void server::DoAccept()
+{
+  auto Fn = [this](std::error_code ErrorCode, tcp::socket Socket) {
+    if (!ErrorCode)
+    {
+      auto Session = std::make_shared<session>(std::move(Socket), Router);
 
-  std::string Body{"============= test ==============\n"};
+      SessionManager.Start(Session);
+    }
 
-  // std::string Response = "HTTP/1.1 200 OK\r\n"
-  //                        "Content-Type: text/plain\r\n"
-  //                        "Content-Length: " +
-  //                        std::to_string(Body.size()) +
-  //                        "\r\n"
-  //                        "\r\n" +
-  //                        Body;
-  std::string Response(Buffer.data(), Buffer.size());
-  asio::write(Socket, asio::buffer(Response));
+    Listen();
+  };
+  Acceptor.async_accept(asio::make_strand(Acceptor.get_executor()), Fn);
 }

@@ -5,6 +5,8 @@
 #include <string>
 #include <vector>
 
+#include "Common.hpp"
+
 namespace http
 {
 
@@ -19,26 +21,14 @@ namespace http
     Error,
   };
 
-  enum class version
-  {
-    Http1_0,
-    Http1_1,
-    Unsupported
-  };
-
-  struct header
-  {
-    std::string Name;
-    std::string Value;
-  };
-
   struct request
   {
-    method Method;
-    std::string URI;
     version Version;
     std::vector<header> Headers;
     std::vector<char> Body;
+
+    method Method;
+    std::string URI;
   };
 
   class request_builder

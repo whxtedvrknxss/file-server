@@ -4,7 +4,8 @@
 
 namespace http
 {
-  request_parser::request_parser(request_builder &Builder) noexcept : Builder{&Builder}, Complete{false}
+  request_parser::request_parser(request_builder &Builder) noexcept
+      : Builder{&Builder}, Complete{false}
   {
     llhttp_settings_init(&Settings);
 

@@ -23,11 +23,10 @@ BraceWrapping:
   SplitEmptyFunction: true
   SplitEmptyRecord: true
   SplitEmptyNamespace: true
-ColumnLimit: 105
+ColumnLimit: 100
 IndentCaseBlocks: false
 IndentCaseLabels: true
 AllowShortCaseLabelsOnASingleLine: false
-BreakBeforeBraces: Allman
 IndentWidth: 2
 SortIncludes: false
 NamespaceIndentation: All

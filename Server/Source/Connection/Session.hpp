@@ -1,44 +1,41 @@
-// Session.hpp
 #pragma once
 
+#include <asio.hpp>
 #include <memory>
 
-#include <asio.hpp>
+#include "HTTP/Request/Builder.hpp"
+#include "HTTP/Request/Parser.hpp"
+#include "HTTP/ResponseBuilder.hpp"
 
-#include "RequestBuilder.hpp"
-#include "RequestParser.hpp"
-#include "ResponseBuilder.hpp"
+class Router;
 
-class router;
-
-class session : public std::enable_shared_from_this<session>
-{
+class Session : public std::enable_shared_from_this<Session> {
   using tcp = asio::ip::tcp;
 
-public:
-  explicit session(tcp::socket Socket, router &Router)
-      : Socket{std::move(Socket)}, RequestParser{RequestBuilder}, Router{&Router}
-  {
-  }
+ public:
+  explicit Session(tcp::socket Socket, Router &Router)
+      : Socket{std::move(Socket)},
+        RequestParser{RequestBuilder},
+        Router{&Router} {}
 
   void Start();
 
-private:
+ private:
   void Read();
-  void Write(size_t BytesAmount);
+  void Write(std::size_t bytes_amount);
 
-  void OnRead(size_t BytesAmount);
+  void OnRead(std::size_t bytes_amount);
 
-private:
-  static constexpr std::size_t MaxLength = 4096;
+ private:
+  static constexpr std::size_t kMaxLength = 4096;
 
   tcp::socket Socket;
-  std::array<char, MaxLength> ReadBuffer;
-  std::array<char, MaxLength> WriteBuffer;
+  std::array<char, kMaxLength> ReadBuffer;
+  std::array<char, kMaxLength> WriteBuffer;
 
-  http::request_builder RequestBuilder;
-  http::request_parser RequestParser;
+  http::RequestBuilder RequestBuilder;
+  http::RequestParser RequestParser;
 
-  http::response_builder ResponseBuilder;
-  router *Router;
+  http::ResponseBuilder ResponseBuilder;
+  Router *Router;
 };

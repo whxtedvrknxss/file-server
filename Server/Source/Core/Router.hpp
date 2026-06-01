@@ -1,6 +1,6 @@
 #pragma once
 
-class router
+class Router
 {
 public:
 

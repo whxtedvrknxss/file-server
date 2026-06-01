@@ -4,25 +4,21 @@
 #include <functional>
 #include <mutex>
 #include <queue>
-#include <vector>
 #include <thread>
+#include <vector>
 
-class thread_pool
-{
-public:
-  thread_pool(size_t NumThreads = std::thread::hardware_concurrency());
-  ~thread_pool();
+class ThreadPool {
+ public:
+  ThreadPool(size_t num_threads = std::thread::hardware_concurrency());
+  ~ThreadPool();
 
-  size_t Size() const
-  {
-    return Workers.size();
-  }
+  [[nodiscard]] std::size_t Size() const { return workers_.size(); }
   void Enqueue(std::function<void()> Task);
 
-private:
-  std::vector<std::thread> Workers;
-  std::queue<std::function<void()>> Tasks;
-  std::mutex QueueMutex;
-  std::condition_variable ConditionVariable;
-  bool Stop;
+ private:
+  std::vector<std::thread> workers_;
+  std::queue<std::function<void()>> tasks_;
+  std::mutex queue_mutex_;
+  std::condition_variable cv_;
+  bool stop_;
 };

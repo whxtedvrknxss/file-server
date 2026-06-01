@@ -42,6 +42,12 @@ target_link_libraries(llhttpInterface INTERFACE
   llhttp::llhttp_static
 )
 
+find_package(spdlog REQUIRED)
+add_library(spdlogInterface INTERFACE)
+target_link_libraries(spdlogInterface INTERFACE 
+  spdlog::spdlog
+)
+
 set_target_properties(Server PROPERTIES 
   RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Output/Server"
 )

@@ -8,5 +8,6 @@ target_link_libraries(${CLIENT_EXECUTABLE_NAME} PRIVATE
   asioInterface
   OpenSSLInterface
   jsonInterface
+  spdlogInterface
 )
 

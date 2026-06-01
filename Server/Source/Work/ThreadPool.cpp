@@ -1,52 +1,43 @@
 #include "ThreadPool.hpp"
 
-thread_pool::thread_pool(size_t NumThreads)
-{
-  for (size_t I = 0; I < NumThreads; I++)
-  {
-    Workers.emplace_back(
-        [this]
+ThreadPool::ThreadPool(size_t num_threads) {
+  for (size_t i = 0; i < num_threads; i++) {
+    workers_.emplace_back([this] {
+      while (true) {
+        std::function<void()> task;
         {
-          while (true)
-          {
-            std::function<void()> Task;
-            {
-              std::unique_lock<std::mutex> Lock(QueueMutex);
-              ConditionVariable.wait(Lock, [this] { return !Tasks.empty() || Stop; });
+          std::unique_lock<std::mutex> Lock(queue_mutex_);
+          cv_.wait(Lock, [this] { return !tasks_.empty() || stop_; });
 
-              if (Stop && Tasks.empty())
-              {
-                return;
-              }
-
-              Task = std::move(Tasks.front());
-              Tasks.pop();
-              Task();
-            }
+          if (stop_ && tasks_.empty()) {
+            return;
           }
-        });
+
+          task = std::move(tasks_.front());
+          tasks_.pop();
+          task();
+        }
+      }
+    });
   }
 }
 
-thread_pool::~thread_pool()
-{
+ThreadPool::~ThreadPool() {
   {
-    std::unique_lock<std::mutex> Lock(QueueMutex);
-    Stop = true;
+    std::unique_lock<std::mutex> lock(queue_mutex_);
+    stop_ = true;
   }
-  ConditionVariable.notify_all();
+  cv_.notify_all();
 
-  for (auto &W : Workers)
-  {
-    W.join();
+  for (auto &worker : workers_) {
+    worker.join();
   }
 }
 
-void thread_pool::Enqueue(std::function<void()> Task)
-{
+void ThreadPool::Enqueue(std::function<void()> task) {
   {
-    std::unique_lock<std::mutex> Lock(QueueMutex);
-    Tasks.emplace(std::move(Task));
+    std::unique_lock<std::mutex> Lock(queue_mutex_);
+    tasks_.emplace(std::move(task));
   }
-  ConditionVariable.notify_one();
+  cv_.notify_one();
 }

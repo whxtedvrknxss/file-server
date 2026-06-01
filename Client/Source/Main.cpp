@@ -5,54 +5,56 @@
 
 #include <asio.hpp>
 
+using std::string_literals::operator""s;
+
 using asio::ip::tcp;
 
-std::vector<std::string> Requests = {{"GET / HTTP/1.1\r\n"
-                                      "Host: localhost\r\n"
-                                      "Connection: close\r\n"
-                                      "\r\n"},
+std::vector<std::string> Requests = {
+    {"GET / HTTP/1.1\r\n"s
+     "Host: localhost\r\n"s
+     "Connection: close\r\n"s
+     "\r\n"s},
 
-                                     {"POST /users HTTP/1.1\r\n"
-                                      "Host: example.com Content -\r\n"
-                                      "Type: application/x-www-form-urlencoded\r\n"
-                                      "Content-Length : 49\r\n"
-                                      "\r\n"
-                                      "name=FirstName+LastName&email=bsmth%40example.com\r\n"
-                                      "\r\n"},
+    {"POST /users HTTP/1.1\r\n"s
+     "Host: example.com\r\n"s
+     "Content-Type: application/x-www-form-urlencoded\r\n"s
+     "Content-Length: 49\r\n"s
+     "\r\n"s
+     "name=FirstName+LastName&email=bsmth%40example.com\r\n"s
+     "\r\n"s},
 
-                                     {"GET /index.html HTTP/1.1\r\n"
-                                      "Host: www.example.com\r\n"
-                                      "User-Agent: Mozilla/5.0\r\n"
-                                      "Accept: text/html\r\n"
-                                      "\r\n"},
+    {"GET /index.html HTTP/1.1\r\n"s
+     "Host: www.example.com\r\n"s
+     "User-Agent: Mozilla/5.0\r\n"s
+     "Accept: text/html\r\n"s
+     "\r\n"s},
 
-                                     {"GET /hello.htm HTTP/1.1\r\n"
-                                      "User-Agent: Mozilla/4.0 (compatible; MSIE5.01; Windows NT)\r\n"
-                                      "Host: www.tutorialspoint.com\r\n"
-                                      "Accept-Language: en-us\r\n"
-                                      "Accept-Encoding: gzip, deflate\r\n"
-                                      "Connection: Keep-Alive\r\n"
-                                      "\r\n"},
+    {"GET /hello.htm HTTP/1.1\r\n"s
+     "User-Agent: Mozilla/4.0 (compatible; MSIE5.01; Windows NT)\r\n"s
+     "Host: www.tutorialspoint.com\r\n"s
+     "Accept-Language: en-us\r\n"s
+     "Accept-Encoding: gzip, deflate\r\n"s
+     "Connection: Keep-Alive\r\n"s
+     "\r\n"s},
 
-                                     {"POST /cgi-bin/process.cgi HTTP/1.1\r\n"
-                                      "User-Agent: Mozilla/4.0 (compatible; MSIE5.01; Windows NT)\r\n"
-                                      "Host: www.tutorialspoint.com\r\n"
-                                      "Content-Type: text/xml; charset=utf-8\r\n"
-                                      "Content-Length: 60\r\n"
-                                      "Accept-Language: en-us\r\n"
-                                      "Accept-Encoding: gzip, deflate\r\n"
-                                      "Connection: Keep-Alive\r\n"
-                                      "\r\n"
-                                      "first=Zara&last=Ali\r\n"
-                                      "\r\n"}};
+    {"POST /cgi-bin/process.cgi HTTP/1.1\r\n"s
+     "User-Agent: Mozilla/4.0 (compatible; MSIE5.01; Windows NT)\r\n"s
+     "Host: www.tutorialspoint.com\r\n"s
+     "Content-Type: text/xml; charset = utf - 8\r\n"s
+     "Content-Length: 60\r\n"s
+     "Accept-Language: en-us\r\n"s
+     "Accept-Encoding: gzip, deflate\r\n"s
+     "Connection: Keep-Alive\r\n"s
+     "\r\n"s
+     "first=Zara&last=Ali\r\n"s
+     "\r\n"s}};
 
 std::array<char, 4096> Buffer;
 
 void GrabSomeData(tcp::socket &Socket)
 {
   Socket.async_read_some(asio::buffer(Buffer.data(), Buffer.size()),
-                         [&](asio::error_code ErrorCode, std::size_t Length)
-                         {
+                         [&](asio::error_code ErrorCode, std::size_t Length) {
                            if (!ErrorCode)
                            {
                              std::println("\n\nRead {} bytes\n\n", Length);

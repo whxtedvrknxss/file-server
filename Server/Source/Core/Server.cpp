@@ -1,35 +1,32 @@
 #include "Server.hpp"
 
-server::server(uint16_t Port) : Acceptor(IoContext, tcp::endpoint(tcp::v4(), Port))
-{
+#include "Utility/Logging.hpp"
+
+Server::Server(uint16_t port)
+    : acceptor_(io_context_, tcp::endpoint(tcp::v4(), port)) {
+  LOG_INFO("The Server started listening on port {}", port);
   DoAccept();
 }
 
-void server::Run()
-{
-  for (size_t I{}; I < ThreadPool.Size(); ++I)
-  {
-    ThreadPool.Enqueue([this] { IoContext.run(); });
+void Server::Run() {
+  for (size_t i{}; i < thread_pool_.Size(); ++i) {
   }
 }
 
-void server::Listen()
-{
+void Server::Listen() {
   DoAccept();
-  IoContext.run();
+  io_context_.run();
 }
 
-void server::DoAccept()
-{
-  auto Fn = [this](std::error_code ErrorCode, tcp::socket Socket) {
-    if (!ErrorCode)
-    {
-      auto Session = std::make_shared<session>(std::move(Socket), Router);
+void Server::DoAccept() {
+  auto func = [this](std::error_code ErrorCode, tcp::socket Socket) {
+    if (!ErrorCode) {
+      auto session = std::make_shared<Session>(std::move(Socket), router_);
 
-      SessionManager.Start(Session);
+      session_manager_.Start(session);
     }
 
     Listen();
   };
-  Acceptor.async_accept(asio::make_strand(Acceptor.get_executor()), Fn);
+  acceptor_.async_accept(asio::make_strand(acceptor_.get_executor()), func);
 }

@@ -3,9 +3,13 @@ add_executable(${SERVER_EXECUTABLE_NAME})
 target_sources(${SERVER_EXECUTABLE_NAME} PRIVATE 
   "Source/Main.cpp"
   "Source/Core/Server.cpp"
-  "Source/Connection/RequestParser.cpp"
-  "Source/Connection/RequestBuilder.cpp"
+  "Source/Core/Router.cpp"
+  "Source/HTTP/Request/Builder.cpp"
+  "Source/HTTP/Request/Parser.cpp"
+  "Source/HTTP/ResponseBuilder.cpp"
+  "Source/Connection/SessionManager.cpp"
   "Source/Connection/Session.cpp"
+  "Source/Work/ThreadPool.cpp"
 )
 
 target_include_directories(${SERVER_EXECUTABLE_NAME} PRIVATE 

@@ -1,9 +1,8 @@
 #include "Core/Server.hpp"
 
-int main(int argc, char *argv[])
-{
-  server Server(8080);
-  Server.Run();
+int main(int argc, char *argv[]) {
+  Server server(8080);
+  server.Run();
 
   return EXIT_SUCCESS;
 }

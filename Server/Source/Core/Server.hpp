@@ -4,31 +4,26 @@
 #include <asio.hpp>
 
 #include "Connection/SessionManager.hpp"
-
+#include "Router.hpp"
 #include "Work/ThreadPool.hpp"
 
-class router
-{
-};
-
-class server
-{
+class Server {
   using tcp = asio::ip::tcp;
 
-public:
-  server(uint16_t Port);
+ public:
+  Server(uint16_t Port);
 
   void Run();
   void Listen();
   void DoAccept();
 
-private:
-  asio::io_context IoContext;
-  tcp::acceptor Acceptor;
+ private:
+  asio::io_context io_context_;
+  tcp::acceptor acceptor_;
 
-  session_manager SessionManager;
+  SessionManager session_manager_;
 
-  router Router;
+  Router router_;
 
-  thread_pool ThreadPool;
+  ThreadPool thread_pool_;
 };
